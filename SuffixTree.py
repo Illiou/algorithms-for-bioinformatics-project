@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
 from itertools import izip_longest
@@ -15,12 +15,12 @@ class Node(object):
 
     """
     # Avoid using dict on class properties
-    __slots__ = ['id', 'start', 'end', 'string_id', 'edges', 'link', 'l_v', 'suffixes']#,
+    __slots__ = ['id', 'start', 'end', 'string_id', 'edges', 'link', 'whole_length', 'l_v', 'suffixes']#,
     #    'suffixes_visited_by']
 
     counter = 0
 
-    def __init__(self, string_id=None, start=None, end=None):
+    def __init__(self, string_id=None, start=None, end=None, whole_length=0):
         self.id = Node.counter
         Node.counter += 1
 
@@ -30,19 +30,20 @@ class Node(object):
         self.edges = {} # recordclass with alphabet?
         self.link = None
 
+        self.whole_length = whole_length  # length of whole suffix from that node to root
         self.l_v = []  # L(v) for suffix prefix match
 
         # from array import array with array('i') ?
         self.suffixes = 0
         #self.suffixes_visited_by = set() #bitarray()
 
-    def setEdge(self, char, string_id, start, end):
+    def setEdge(self, char, string_id, start, end, whole_length):
         """
         Add one pointing to a new node that is [start, end) on string string_id.
         char -> Node
         Returns the new node.
         """
-        self.edges[char] = Node(string_id, start, end)
+        self.edges[char] = Node(string_id, start, end, whole_length)
 
         return self.edges[char]
 
@@ -216,7 +217,8 @@ class SuffixTree(object):
                             self.get_char(self.active_edge),
                             self.active_string,
                             step,
-                            ENDCHAR)
+                            ENDCHAR,
+                            ENDCHAR - step)
                     newLeaf.addSuffix(self.active_string, step - self.remainder - 1)
 
                     # rule 2
@@ -259,18 +261,22 @@ class SuffixTree(object):
                                 self.get_char(self.active_edge),
                                 edge.string_id,
                                 edge.start,
-                                edge.start + self.active_length) #-1 testings
+                                edge.start + self.active_length,
+                                edge.whole_length - len(edge) + self.active_length)
 
                         # Insert the new char
                         newLeaf = splitEdge.setEdge(
                                 c_char,
                                 self.active_string,
                                 step,
-                                ENDCHAR)
+                                ENDCHAR,
+                                splitEdge.whole_length + ENDCHAR - step)
+
                         newLeaf.addSuffix(self.active_string, step - self.remainder - 1)
 
                         # Old edge start a bit further now
                         edge.start += self.active_length
+                        #edge.whole_length -= self.active_length
                         #edge.string_id = self.active_string
 
                         # Insert the old edge to the new split edge
@@ -452,8 +458,33 @@ class SuffixTree(object):
                     to_be_processed.append(n)
                 else:
                     string = self.strings[node.string_id]  # hat jede Node nur eine string id?
-                    if string[node.start] == '$':
+                    if n.start == len(string)-1:
                         node.l_v.append(n.string_id)
+
+    def suffix_prefix_match(self, string_id1, string_id2):
+        """Returns length of the suffix prefix match of string with idnr string_id1 with
+        string with idnr string_id2"""
+
+        stack = {0:[], 1:[]}
+
+        # depth first search
+        to_be_processed = [n for n in self.root.edges.values()]
+        while len(to_be_processed) > 0:
+            node = to_be_processed.pop()
+            for n in node.edges.values():
+                to_be_processed.append(n)
+
+            # push node on stack i if i in L(v):
+            for index in node.l_v:
+                stack[index].append(node)
+
+            # when a leaf j (representing the entire string S_j) is reached, scan the stack and record
+            # for each index i the current top of the i-th stack
+            if node.string_id == string_id2 and node.whole_length == len(self.strings[string_id2]):
+                match_node = stack[0][-1]
+                match_length = match_node.whole_length
+                return match_length
+                break
 
 
 def _find_string_first_mismatch(s1, s2):
