@@ -15,7 +15,7 @@ class Node(object):
 
     """
     # Avoid using dict on class properties
-    __slots__ = ['id', 'start', 'end', 'string_id', 'edges', 'link', 'suffixes']#,
+    __slots__ = ['id', 'start', 'end', 'string_id', 'edges', 'link', 'l_v', 'suffixes']#,
     #    'suffixes_visited_by']
 
     counter = 0
@@ -443,6 +443,7 @@ class SuffixTree(object):
         return longest_match
 
     def set_terminal_labels(self):
+        """sets the L(v) labels to internal nodes that have an outgoing edge with only the string end character"""
         to_be_processed = [n for n in self.root.edges.values()]
         while len(to_be_processed) > 0:
             node = to_be_processed.pop()
@@ -498,6 +499,10 @@ def cmd_line_main():
             print "Install IPython.. doh.. nut"
             exit(1)
         embed()
-
+"""
 if __name__ == "__main__":
     cmd_line_main()
+"""
+
+st = SuffixTree()
+st.add_string( "TGGAATTCT")
