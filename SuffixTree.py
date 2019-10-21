@@ -461,9 +461,9 @@ class SuffixTree(object):
                     if n.start == len(string)-1:
                         node.l_v.append(n.string_id)
 
-    def suffix_prefix_match(self, string_id1, string_id2):
-        """Returns length of the suffix prefix match of string with idnr string_id1 with
-        string with idnr string_id2"""
+    def suffix_prefix_match(self):
+        """Returns length of the suffix prefix match of string. Suffix string should be first string
+         in tree, prefix string second string in tree"""
 
         stack = {0:[], 1:[]}
 
@@ -480,11 +480,15 @@ class SuffixTree(object):
 
             # when a leaf j (representing the entire string S_j) is reached, scan the stack and record
             # for each index i the current top of the i-th stack
-            if node.string_id == string_id2 and node.whole_length == len(self.strings[string_id2]):
-                match_node = stack[0][-1]
-                match_length = match_node.whole_length
-                return match_length
-                break
+            if node.string_id == 1 and node.whole_length == len(self.strings[1]):
+                if len(stack[0]) > 0:
+                    match_node = stack[0][-1]
+                    match_length = match_node.whole_length
+                    return match_length
+                    break
+                else:
+                    return 0
+                    break
 
 
 def _find_string_first_mismatch(s1, s2):
