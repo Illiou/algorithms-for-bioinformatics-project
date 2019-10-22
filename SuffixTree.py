@@ -15,18 +15,21 @@ class Node(object):
 
     """
     # Avoid using dict on class properties
-    __slots__ = ['id', 'start', 'end', 'string_id', 'edges', 'link', 'whole_length', 'l_v', 'suffixes']#,
+    __slots__ = ['id', 'start', 'end', 'string_id', 'string_list', 'edges', 'link', 'whole_length', 'l_v', 'suffixes']#,
     #    'suffixes_visited_by']
 
     counter = 0
 
-    def __init__(self, string_id=None, start=None, end=None, whole_length=0):
+    def __init__(self, string_id=None, start=None, end=None, whole_length=0, string_list = []):
         self.id = Node.counter
         Node.counter += 1
 
         self.start = start
         self.end = end
         self.string_id = string_id
+
+        self.string_list = string_list # list of all string_ids that have this suffix
+
         self.edges = {} # recordclass with alphabet?
         self.link = None
 
@@ -37,13 +40,13 @@ class Node(object):
         self.suffixes = 0
         #self.suffixes_visited_by = set() #bitarray()
 
-    def setEdge(self, char, string_id, start, end, whole_length):
+    def setEdge(self, char, string_id, start, end, whole_length, string_list = []):
         """
         Add one pointing to a new node that is [start, end) on string string_id.
         char -> Node
         Returns the new node.
         """
-        self.edges[char] = Node(string_id, start, end, whole_length)
+        self.edges[char] = Node(string_id, start, end, whole_length, string_list)
 
         return self.edges[char]
 
@@ -220,6 +223,8 @@ class SuffixTree(object):
                             ENDCHAR,
                             ENDCHAR - step)
                     newLeaf.addSuffix(self.active_string, step - self.remainder - 1)
+                    if self.active_string not in newLeaf.string_list:
+                        newLeaf.string_list.append(self.active_string)
 
                     # rule 2
                     self.set_suffix_link(self.active_node)
@@ -262,8 +267,10 @@ class SuffixTree(object):
                                 edge.string_id,
                                 edge.start,
                                 edge.start + self.active_length,
-                                edge.whole_length - len(edge) + self.active_length)
-
+                                edge.whole_length - len(edge) + self.active_length,
+                                edge.string_list)
+                        if self.active_string not in splitEdge.string_list:
+                            splitEdge.string_list.append(self.active_string)
                         # Insert the new char
                         newLeaf = splitEdge.setEdge(
                                 c_char,
@@ -271,6 +278,9 @@ class SuffixTree(object):
                                 step,
                                 ENDCHAR,
                                 splitEdge.whole_length + ENDCHAR - step)
+
+                        if self.active_string not in newLeaf.string_list:
+                            newLeaf.string_list.append(self.active_string)
 
                         newLeaf.addSuffix(self.active_string, step - self.remainder - 1)
 
@@ -489,6 +499,19 @@ class SuffixTree(object):
                 else:
                     return 0
                     break
+
+    def find_most_common_adaptersequence(self):
+        """Most likely adaptersequence is suffix that appears most often in sequences.
+        This function counts from how many sequences a given suffix branch comes from
+        and returns the one which is the most often"""
+
+        to_be_processed = [n for n in self.root.edges.values()]
+        while len(to_be_processed) > 0:
+            node = to_be_processed.pop()
+            for n in node.edges.values():
+                to_be_processed.append(n)
+
+
 
 
 def _find_string_first_mismatch(s1, s2):
