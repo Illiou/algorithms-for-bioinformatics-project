@@ -37,10 +37,6 @@ for string_id, match_length in adapter_match_lengths.items():
         print(f"Adapter part: {matched_suffixes[-1]}   string part: {suffix_tree.strings[string_id][-match_length - 1:-1]}")
 print(matched_suffixes)
 
-# TODO: fix this bug:
-# Something went wrong at string 421 with match length 6
-# Adapter part: TGGAAT   string part: TGTTGA
-
 # TODO: remove adapter sequence from result and make sure indices are correct (dict -> list)
 # import numpy as np
 # length_distribution = np.histogram(adapter_match_lengths.keys(), bins=len(adapter_match_lengths))

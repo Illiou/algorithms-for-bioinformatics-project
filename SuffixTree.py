@@ -144,7 +144,7 @@ class SuffixTree:
             # add string_id to existing leaf node...
             if suffix_pos == len(suffix):
                 current_node.add_string_to_leaf(string_id, i)
-                if self.track_terminal_edges:
+                if self.track_terminal_edges and current_node.end - current_node.start == 1:
                     current_node.parent.terminal_edge_ids.add(string_id)
             else:  # ...or add new leaf node
                 new_leaf = current_node.add_children(Node(i + suffix_pos, len(string), string_id, i))
