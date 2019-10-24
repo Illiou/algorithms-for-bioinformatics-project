@@ -1,5 +1,5 @@
 import json
-
+"""Anmerkungen: Terminal edges stimmen noch nicht ganz, zB für 'acc' und 'ccg'"""
 
 def make_list_or_None(v):
     if v is None:
@@ -88,6 +88,7 @@ class SuffixTree:
         self.root = Node()
         self._add_string = self._add_string_naive if construction_method == "naive" else self._add_string_ukkonen
         self.track_terminal_edges = track_terminal_edges
+        self.leaves = []  # list of leaves in tree
 
         self._construct()
 
@@ -125,6 +126,7 @@ class SuffixTree:
                                 split_node = current_node.add_children(Node(child.start, label_pos, child.string_id))
                                 split_node.add_children(current_node.children.pop(child_id))
                                 child.set_start(label_pos)
+                                #self.leaves.append(split_node)  # add node to leave list
                                 # to add leaf node
                                 current_node = split_node
                                 node_found = True
@@ -143,7 +145,8 @@ class SuffixTree:
                 if self.track_terminal_edges:
                     current_node.parent.terminal_edge_ids.append(string_id)
             else:  # ...or add new leaf node
-                current_node.add_children(Node(i + suffix_pos, len(string), string_id, i))
+                new_leaf = current_node.add_children(Node(i + suffix_pos, len(string), string_id, i))
+                self.leaves.append(new_leaf)
                 if self.track_terminal_edges and suffix_pos == len(suffix) - 1:
                     current_node.terminal_edge_ids.append(string_id)
 
@@ -207,6 +210,49 @@ class SuffixTree:
         else:
             strings = list(zip(node.string_id, node.string_pos))
             return [f"{label}\t\t\t{strings}"]
+
+    def most_common_adaptersequence(self):
+        """Most common adapter sequence is suffix with most amaount of terminal labels on the path"""
+
+        number_terminal_edges = []  # counts for every leave node how many terminal edges are on the path to the root
+        suffixes = []  # stores the whole suffix for every leave node
+
+        to_be_processed = [n for n in self.leaves]
+        while len(to_be_processed) > 0:
+            node = to_be_processed.pop()
+            terminal_edges_on_path = []  # stores how many strings end on this path
+
+            # prevent that the leave '$' where obviously all strings go through is taken as most common suffix
+            if node.end - node.start > 1:
+                terminal_edges_on_path.extend(node.string_id)
+
+            if isinstance(node.string_id, list):
+                string_id = node.string_id[0]
+            else:
+                string_id = node.string_id
+            suffix = self.strings[string_id][-node.path_label_length::]
+
+            # go from leave through whole branch to the root and count the terminal edges on the way
+            while node.parent is not self.root:
+                for element in node.terminal_edge_ids:
+                    if element not in terminal_edges_on_path:  # prevent doubles bc later we only look at length of list
+                        terminal_edges_on_path.append(element)
+                node = node.parent
+
+            suffixes.append(suffix)
+            number_terminal_edges.append(len(terminal_edges_on_path))
+
+        print(number_terminal_edges)
+        # path with most terminal edges is the most probable adapter sequence
+        max_value = max(number_terminal_edges)
+        if max_value == 1:
+            return None
+
+        else:
+            index_max = number_terminal_edges.index(max_value)
+            max_suffix = suffixes[index_max]
+            return max_suffix
+
 
     def __str__(self):
         return "\n ".join(self.render_children(self.root, root_label="()"))

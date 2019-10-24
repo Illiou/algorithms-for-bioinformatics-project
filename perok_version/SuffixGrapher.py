@@ -53,10 +53,7 @@ class Grapher(object):
             # todo, accessing correct?
             internalString = self.gst.get_internal_subtring(edge, edge.start,
                                                             edge.end)  # min(edge.end, len(treeString)))
-            if len(edge.l_v) > 0:
-                edgeString = "{0} ({1})[{2}, {3}]{4}{5}".format(internalString, edge.string_id, edge.start, edge.end, edge.string_list, edge.l_v)
-            else:
-                edgeString = "{0} ({1})[{2}, {3}]{4}".format(internalString, edge.string_id, edge.start, edge.end, edge.string_list)
+            edgeString = "{0} ({1})[{2}, {3}]{4}".format(internalString, edge.string_id, edge.start, edge.end, edge.string_list)
             # print edgeString, char, edge.start, edge.start + len(edge)
             # edgeString = string[edge.start: len(string) if edge[1] is ENDCHAR else edge[1]]
 
