@@ -37,6 +37,14 @@ for string_id, match_length in adapter_match_lengths.items():
         print(f"Adapter part: {matched_suffixes[-1]}   string part: {suffix_tree.strings[string_id][-match_length - 1:-1]}")
 print(matched_suffixes)
 
-# TODO: remove adapter sequence from result and make sure indices are correct (dict -> list)
-# import numpy as np
-# length_distribution = np.histogram(adapter_match_lengths.keys(), bins=len(adapter_match_lengths))
+
+import numpy as np
+adapter_match_lengths_values = list(adapter_match_lengths.values())
+length_distribution, _ = np.histogram(adapter_match_lengths_values, bins=max(adapter_match_lengths_values), density=True)
+
+import matplotlib.pyplot as plt
+
+curr_fig, curr_ax = plt.subplots()
+curr_ax.bar(np.arange(len(length_distribution)), length_distribution)
+curr_ax.set(title="Adapter Prefix Length Distribution", xlabel="Adapter Prefix Length", ylabel="Occurrence Probability")
+plt.show()

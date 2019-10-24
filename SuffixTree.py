@@ -177,7 +177,12 @@ class SuffixTree:
             else:
                 raise AssertionError("didn't find prefix in tree")
         # record how far each string matched into the prefix string
-        prefix_match_pos = {string_id: stack[-1].path_label_length for string_id, stack in string_stacks.items()}
+        prefix_match_pos = {}
+        for string_id in range(len(self.strings)):
+            stack = string_stacks.get(string_id)
+            prefix_match_pos[string_id] = stack[-1].path_label_length if stack is not None and len(stack) > 0 else 0
+        # remove prefix itself
+        prefix_match_pos.pop(prefix_string_id, None)
         return prefix_match_pos
 
     def most_common_adaptersequence(self):
