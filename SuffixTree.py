@@ -1,5 +1,5 @@
 import json
-
+import numpy as np
 
 def make_list_or_none(v):
     if v is None:
@@ -38,6 +38,11 @@ class Node:
 
         self.parent = None
         self.path_label_length = 0
+
+    def __repr__(self):
+        s = str(self.string_id[0]) +'['+ str(self.start) + ':'+ str(self.end) +']'
+
+        return s
 
     def add_children(self, children: "Node"):  # type annotation just for PyCharm...
         """add child(ren) and return the last one"""
@@ -186,7 +191,7 @@ class SuffixTree:
         return prefix_match_pos
 
     def most_common_adaptersequence(self):
-        """Most common adapter sequence is suffix with most amaount of terminal labels on the path"""
+        """Most common adapter sequence is suffix with most amount of terminal labels on the path"""
 
         number_terminal_edges = []  # counts for every leave node how many terminal edges are on the path to the root
         suffixes = []  # stores the whole suffix for every leave node
@@ -266,6 +271,56 @@ class SuffixTree:
     def __str__(self):
         return "\n ".join(self.render_children(self.root, root_label=True))
 
+
+    def find_barcodes(self):
+        """Basis idea: After removing the adapter sequence, barcodes are the longest commonly occuring suffixes of
+        the sequences. Moreover, this algorithm assumes that the minimum barcode length is 4. It does not assume
+        that all barcodes have the same length."""
+
+        number_of_sequences = np.zeros(shape=(len(self.strings),1))  # i-th entry stores number of sequences that share this suffix of string i
+        suffixes = [0]*len(self.strings)   # i-th entry stores this suffix of string i
+        len_suffixes = np.zeros(shape=(len(self.strings),1))  # i-th entry stores length of this suffix of string i
+
+        for node in self.leaves:
+
+            if isinstance(node.string_id, list):
+                string_id = node.string_id[0]
+                suffix = self.strings[string_id][-node.path_label_length:-1]
+                # neglect '$' leave and also suffixes that are shorter then 4
+                if len(suffix) < 4:
+                    continue
+                # check if more strings then for other suffix of that string end in this suffix, if its more then this is the most probable barcode at the moment
+                if len(node.string_id) > number_of_sequences[string_id]:
+                    for id in node.string_id:
+                        number_of_sequences[id] = len(node.string_id)
+                        suffixes[id] = suffix
+                        len_suffixes[id] = len(suffix)
+                # if its the same number but the length is longer this is the most probable barcode at the moment:
+                elif len(node.string_id) == number_of_sequences[string_id] and len_suffixes[string_id] > len_suffixes[string_id]:
+                    for id in node.string_id:
+                        number_of_sequences[id] = len(node.string_id)
+                        suffixes[id] = suffix
+                        len_suffixes[id] = len(suffix)
+                # else, a suffix before was better
+            else:
+                id = node.string_id
+                suffix = self.strings[id][-node.path_label_length:-1]
+                # neglect '$' leave and also suffixes that are shorter then 4
+                if len(suffix) < 4:
+                    continue
+                # check if more strings then before end in this suffix, if its more then this is the most probable barcode at the moment
+                if 1 > number_of_sequences[string_id]:
+                    number_of_sequences[id] = 1
+                    suffixes[id] = suffix
+                    len_suffixes[id] = len(suffix)
+                # if its the same number but the length is longer this is the most probable barcode at the moment:
+                elif 1 == number_of_sequences[id] and len_suffixes[id] > len_suffixes[id]:
+                    number_of_sequences[id] = 1
+                    suffixes[id] = suffix
+                    len_suffixes[id] = len(suffix)
+            # else, a suffix before was better
+
+        return suffixes
 
 if __name__ == '__main__':
     test_string = ["acc", "bcc", "ccg"]

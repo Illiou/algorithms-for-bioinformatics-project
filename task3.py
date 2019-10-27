@@ -6,11 +6,14 @@ from SuffixTree import SuffixTree
 
 
 st = SuffixTree("acc", construction_method="naive", track_terminal_edges=True)
-st.add_string("bcca")
+st.add_string("ccg")
+st.add_string('ccc')
+st.add_string('abbcg')
+st.add_string('abbccc')
 #st.add_string("ATA")
 #st.add_string("TB")
 suffix = st.most_common_adaptersequence()
-print(st)
+print(suffix)
 """
 print(st)
 for leave in st.leaves:
