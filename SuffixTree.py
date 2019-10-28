@@ -221,7 +221,6 @@ class SuffixTree:
             suffixes.append(suffix)
             number_terminal_edges.append(len(terminal_edges_on_path))
 
-        print(number_terminal_edges)
         # path with most terminal edges is the most probable adapter sequence
         max_value = max(number_terminal_edges)
         if max_value == 1:
@@ -229,7 +228,7 @@ class SuffixTree:
         else:
             index_max = number_terminal_edges.index(max_value)
             max_suffix = suffixes[index_max]
-            return max_suffix
+            return max_suffix[:-1]
 
     def __repr__(self):
         # needed to remove circularity
@@ -274,12 +273,12 @@ class SuffixTree:
 
     def find_barcodes(self):
         """Basis idea: After removing the adapter sequence, barcodes are the longest commonly occuring suffixes of
-        the sequences. Moreover, this algorithm assumes that the minimum barcode length is 4. It does not assume
+        the sequences. Moreover, this algorithm assumes that the minimum barcode length is 4 and the maximum 8. It does not assume
         that all barcodes have the same length."""
 
-        number_of_sequences = np.zeros(shape=(len(self.strings),1))  # i-th entry stores number of sequences that share this suffix of string i
+        number_of_sequences = [0]*len(self.strings)  # i-th entry stores number of sequences that share this suffix of string i
         suffixes = [0]*len(self.strings)   # i-th entry stores this suffix of string i
-        len_suffixes = np.zeros(shape=(len(self.strings),1))  # i-th entry stores length of this suffix of string i
+        len_suffixes = [0]*len(self.strings)  # i-th entry stores length of this suffix of string i
 
         for node in self.leaves:
 
@@ -320,7 +319,35 @@ class SuffixTree:
                     len_suffixes[id] = len(suffix)
             # else, a suffix before was better
 
-        return suffixes
+        # all barcodes have the same length, so the length that appears most often is the length of the barcodes
+        length = max(set(len_suffixes), key=len_suffixes.count)
+        j = 0
+        for i in suffixes:
+            if i == 0:
+                print(self.strings[j])
+            j += 1
+        barcodes = [suffixes[n][-length:] for n in range(len(suffixes))]
+        number_sequences_per_sample = {x: barcodes.count(x) for x in barcodes}
+        sequences_per_sample = {x:[] for x in barcodes}
+        i = 0
+        for suffix in suffixes:
+            sequences_per_sample[suffix[-length:]].append(self.strings[i][:-length])
+            i += 1
+        length_of_sequences = {x:[] for x in barcodes}
+        for string_id in range(len(self.strings)):
+            length_of_sequences[barcodes[string_id]].append(len(self.strings[string_id]))
+
+        return set(barcodes), sequences_per_sample, number_sequences_per_sample, length_of_sequences
+
+    def count_unique_sequences(self):
+        """Counts the amount of unique sequences in the tree."""
+        counts = {}
+        for leave in self.leaves:
+            # if that suffix represents the whole sequence, count all of those sequences
+            if leave.path_label_length == len(self.strings[leave.string_id[0]]):
+                counts[self.strings[leave.string_id[0]]] = len(leave.string_id)
+        return counts
+
 
 if __name__ == '__main__':
     test_string = ["acc", "bcc", "ccg"]
