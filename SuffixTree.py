@@ -1,5 +1,6 @@
 import json
-import numpy as np
+from math import floor
+
 
 def make_list_or_none(v):
     if v is None:
@@ -163,32 +164,80 @@ class SuffixTree:
         raise NotImplementedError("Ukkonen not yet implemented, pass construction_method=\"naive\" to SuffixTree")
 
     def find_suffix_matches_for_prefix(self, prefix_string_id):
+        """
+        Finds the length of the longest suffix-prefix match between the given prefix string and all other suffixes
+        in the tree.
+        Args:
+            prefix_string_id: prefix_string_id: string_id of the string whose prefix will be tried to be matched
+        Returns: list of maximally matched length for each string in the tree
+        """
         current_node = self.root
         prefix_pos = 0
-        string_stacks = {}
+        strings_match_lengths = {string_id: 0 for string_id in range(len(self.strings))}
         while len(current_node.children) > 0:
-            # add current terminal edge string ids to stack
+            # update maximal path length for each string with terminal edges from this node
             for string_id in current_node.terminal_edge_ids:
-                string_stacks.setdefault(string_id, [])
-                string_stacks[string_id].append(current_node)
-            # look for child with prefix matching label
+                strings_match_lengths[string_id] = max(strings_match_lengths[string_id], current_node.path_label_length)
+            # look for child with prefix matching label to continue traversal
             for child in current_node.children:
                 child_string = self.strings[child.string_id[0]]
                 if self.strings[prefix_string_id][prefix_pos] == child_string[child.start]:
-                    assert self.strings[prefix_string_id][prefix_pos:].find(child_string[child.start:]) == 0
                     prefix_pos += child.end - child.start
                     current_node = child
                     break
             else:
                 raise AssertionError("didn't find prefix in tree")
-        # record how far each string matched into the prefix string
-        prefix_match_pos = {}
-        for string_id in range(len(self.strings)):
-            stack = string_stacks.get(string_id)
-            prefix_match_pos[string_id] = stack[-1].path_label_length if stack is not None and len(stack) > 0 else 0
         # remove prefix itself
-        prefix_match_pos.pop(prefix_string_id, None)
-        return prefix_match_pos
+        strings_match_lengths.pop(prefix_string_id, None)
+        return strings_match_lengths
+
+    def find_suffix_matches_for_prefix_with_mismatches(self, prefix_string_id, max_mismatch_rate):
+        """
+        Returns the length of the longest suffix-prefix match between the given prefix string and all other suffixes
+        in the tree with a certain allowed mismatch percentage.
+        Args:
+            prefix_string_id: string_id of the string whose prefix will be tried to be matched
+            max_mismatch_rate: number in 0..1 specifying the maximally allowed mismatch percentage
+        Returns: list of maximally matched length for each string in the tree
+        """
+        prefix_string = self.strings[prefix_string_id]
+        # maximally possible mismatch count no matter the length of the match
+        max_mismatch_count = floor(len(prefix_string) * max_mismatch_rate)
+        # [(prefix_pos, mismatch_count, Node), ...]
+        candidate_nodes = [(0, 0, self.root)]
+        strings_match_lengths = {string_id: 0 for string_id in range(len(self.strings))}
+        while len(candidate_nodes) > 0:
+            # continue search at the state we were at while adding this candidate node
+            node_prefix_pos, node_mismatch_count, current_node = candidate_nodes.pop()
+            # try to match prefix string with all children
+            for child in current_node.children:
+                prefix_pos = node_prefix_pos
+                mismatch_count = node_mismatch_count
+                child_string = self.strings[child.string_id[0]]
+                label_pos = child.start
+                # match label of child node with prefix string one by one until max_mismatch_count exceeded or next node reached
+                while mismatch_count <= max_mismatch_count:
+                    # check if next node reached and if so add it to candidates
+                    if label_pos >= child.end:
+                        candidate_nodes.append((prefix_pos, mismatch_count, child))
+                        break
+                    # check if end of suffix
+                    if child_string[label_pos] == TERMINATION_SYMBOL:
+                        suffix_length = child.path_label_length - 1
+                        # check if matched suffix is still within max_mismatch_rate considering it's length
+                        if suffix_length > 0 and mismatch_count / suffix_length <= max_mismatch_rate:
+                            for string_id in child.string_id:
+                                # update maximally matched length for all strings that have suffix ending here
+                                strings_match_lengths[string_id] = max(strings_match_lengths[string_id], suffix_length)
+                        break
+                    # increment mismatch count if no match
+                    if prefix_string[prefix_pos] != child_string[label_pos]:
+                        mismatch_count += 1
+                    prefix_pos += 1
+                    label_pos += 1
+        # remove prefix itself
+        strings_match_lengths.pop(prefix_string_id, None)
+        return strings_match_lengths
 
     def most_common_adaptersequence(self):
         """Most common adapter sequence is suffix with most amount of terminal labels on the path"""
@@ -235,7 +284,7 @@ class SuffixTree:
         def remove_parent(o):
             if isinstance(o, set):
                 return list(o)
-            d = o.__dict__
+            d = o.__dict__.copy()
             if isinstance(o, Node):
                 d.pop("parent", None)
             return d
@@ -243,7 +292,7 @@ class SuffixTree:
 
     def render_children(self, node, root_label=False):
         if root_label:
-            label = f"({', '.join(str(n) for n in node.terminal_edge_ids)})"
+            label = f"({min(node.terminal_edge_ids)}..{max(node.terminal_edge_ids)})"
         else:
             label = f"|-{self.strings[node.string_id[0]][node.start:node.end]}"
             if self.track_terminal_edges and len(node.terminal_edge_ids) > 0:
