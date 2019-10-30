@@ -64,11 +64,7 @@ adapter_match_lengths = suffix_tree.find_suffix_matches_for_prefix(adapter_strin
 end_time = current_milli_time()
 
 print(f"\nTime needed to find adapter matches: {end_time - start_time} ms")
-start_time = current_milli_time()
 print(f"Number of matched sequences: {sum(v > 0 for v in adapter_match_lengths.values())}")
-end_time = current_milli_time()
-print(f"\nTime needed to find adapter matches: {end_time - start_time} ms")
-
 
 if check_correctness_and_print_suffixes:
     matched_suffixes = []
