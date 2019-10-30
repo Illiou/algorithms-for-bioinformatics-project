@@ -1,5 +1,6 @@
 import json
 from math import floor
+from operator import itemgetter
 
 
 def make_list_or_none(v):
@@ -239,45 +240,31 @@ class SuffixTree:
         strings_match_lengths.pop(prefix_string_id, None)
         return strings_match_lengths
 
-    def most_common_adaptersequence(self):
-        """Most common adapter sequence is suffix with most amount of terminal labels on the path"""
-
-        number_terminal_edges = []  # counts for every leave node how many terminal edges are on the path to the root
-        suffixes = []  # stores the whole suffix for every leave node
-
-        to_be_processed = [n for n in self.leaves]
-        while len(to_be_processed) > 0:
-            node = to_be_processed.pop()
-            terminal_edges_on_path = []  # stores how many strings end on this path
-
-            # prevent that the leave '$' where obviously all strings go through is taken as most common suffix
-            if node.end - node.start > 1:
-                terminal_edges_on_path.extend(node.string_id)
-
-            if isinstance(node.string_id, list):
-                string_id = node.string_id[0]
-            else:
-                string_id = node.string_id
-            suffix = self.strings[string_id][-node.path_label_length::]
-
-            # go from leave through whole branch to the root and count the terminal edges on the way
-            while node.parent is not self.root:
-                for element in node.terminal_edge_ids:
-                    if element not in terminal_edges_on_path:  # prevent doubles bc later we only look at length of list
-                        terminal_edges_on_path.append(element)
-                node = node.parent
-
-            suffixes.append(suffix)
-            number_terminal_edges.append(len(terminal_edges_on_path))
-
-        # path with most terminal edges is the most probable adapter sequence
-        max_value = max(number_terminal_edges)
-        if max_value == 1:
-            return None
-        else:
-            index_max = number_terminal_edges.index(max_value)
-            max_suffix = suffixes[index_max]
-            return max_suffix[:-1]
+    def find_most_common_suffixes(self):
+        """
+        Traverses the whole tree to find the suffix with the most terminal edge ids on the path
+        Returns: list of the form [(number_of_terminal_edge_ids_on_path, suffix_length, Node), ...] ordered by
+        most terminal edges and then suffix length
+        """
+        # [(number_of_terminal_edge_ids_on_path, suffix_length, Node), ...]
+        recorded_leaves = []
+        # [(terminal_edge_ids_on_path, Node), ...]
+        nodes_left = [(set(), self.root)]
+        while len(nodes_left) > 0:
+            terminal_edge_ids_on_path, node = nodes_left.pop()
+            for child in node.children:
+                new_terminal_edge_ids_on_path = terminal_edge_ids_on_path.copy()
+                if len(child.children) > 0:
+                    new_terminal_edge_ids_on_path.update(child.terminal_edge_ids)
+                    nodes_left.append((new_terminal_edge_ids_on_path, child))
+                else:
+                    # don't add string ids from nodes with only the Termination Symbol as label
+                    # they have been added through the parents terminal_edge_ids already and it avoids empty string as most common
+                    if self.strings[child.string_id[0]][child.start:child.end] != TERMINATION_SYMBOL:
+                        new_terminal_edge_ids_on_path.update(child.string_id)
+                    recorded_leaves.append((len(new_terminal_edge_ids_on_path), child.path_label_length, child))
+        recorded_leaves.sort(key=itemgetter(0, 1), reverse=True)
+        return recorded_leaves
 
     def __repr__(self):
         # needed to remove circularity
@@ -292,7 +279,10 @@ class SuffixTree:
 
     def render_children(self, node, root_label=False):
         if root_label:
-            label = f"({min(node.terminal_edge_ids)}..{max(node.terminal_edge_ids)})"
+            if self.track_terminal_edges and len(node.terminal_edge_ids) > 0:
+                label = f"({min(node.terminal_edge_ids)}..{max(node.terminal_edge_ids)})"
+            else:
+                label = "()"
         else:
             label = f"|-{self.strings[node.string_id[0]][node.start:node.end]}"
             if self.track_terminal_edges and len(node.terminal_edge_ids) > 0:
@@ -399,7 +389,19 @@ class SuffixTree:
 
 
 if __name__ == '__main__':
-    test_string = ["acc", "bcc", "ccg"]
-    tree = SuffixTree(test_string, construction_method="naive", track_terminal_edges=True, verbose=True)
+    # test_string = ["axbcd", "dxbcd", "xbcda", "bxbcd"]
+    # test_string = ["cba", "dcb", "edc"]
+    test_string = ["CTCGTACGACTCTTAGCGGTGGATCACTCGGCTCGTGCGGGGAATTCTCG",
+"CGCGACCTCAGATCAGACGTGGCGACCCGCTGAATTTAAGCTGGAATTCT",
+"TCGCGTGATGACATTCTCCGGAATCGCTGTACGGCCTTGATGAAAGCACA",
+"ACGTTAGGTCAAGGTGTAGCTGGAATTCTCGGGTGCCAAGGAACTCCCGT",
+"ACGGAGCCTGGAATTCTCGGGTGCCAAGGCACTCCAGTCACACAGTGATC",
+"TTCAAGTAATCCAGGATAGGCATGGAATTCTCGGGTGCCAAGGAACTCCA",
+"CCTGGATGATGATAAGCAAATGCTGACTGAACATGAAGGTCTTAATTAGC",
+"TTTCTATGATGAATCAAACTAGCTCACTATGACCGACAGTGAAAATACAT",
+"TGGAATTCTCGGGAGCCAAGGAACTCCAGTAAAACAGGGATCTCGTATGC",
+"TTTCTATGATGAATCAAACTAGCTCACTATGACCGACAGTGAAAATACAT",]
+    tree = SuffixTree(test_string, construction_method="naive", track_terminal_edges=True, verbose=False)
     print(repr(tree))
     print(tree)
+    print(tree.find_most_common_longest_suffix())

@@ -86,7 +86,7 @@ if save_outputs:
 
 if save_graphs:
     remaining_lengths = sequences_length - np.asarray(list(adapter_match_lengths.values()))
-    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=max(remaining_lengths + 1), density=True)
+    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=max(remaining_lengths) + 1, density=True)
 
     curr_fig, curr_ax = plt.subplots()
     curr_ax.bar(np.arange(len(remaining_lengths_distribution)), remaining_lengths_distribution)
@@ -122,7 +122,7 @@ if save_outputs:
 
 if save_graphs:
     remaining_lengths = sequences_length - np.asarray(list(adapter_match_lengths_with_mismatches.values()))
-    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=max(remaining_lengths + 1), density=True)
+    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=max(remaining_lengths) + 1, density=True)
 
     curr_fig, curr_ax = plt.subplots()
     curr_ax.bar(np.arange(len(remaining_lengths_distribution)), remaining_lengths_distribution)
