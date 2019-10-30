@@ -40,7 +40,7 @@ task2_graph_path = f"{graphs_path}task2_remaining_lengths_distribution{lines_par
 
 # ---------------- Compute Suffix Tree ----------------
 
-suffix_tree = SuffixTree(adapter, construction_method="naive", track_terminal_edges=True)
+suffix_tree = SuffixTree(adapter)
 adapter_string_id = 0
 
 start_time = current_milli_time()

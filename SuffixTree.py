@@ -3,57 +3,39 @@ from math import floor
 from operator import itemgetter
 
 
-def make_list_or_none(v):
-    if v is None:
-        return None
-    if not isinstance(v, list):
-        return [v]
-    return v
-
-
-def make_set_or_empty_set(v):
-    if v is None:
-        return set()
-    if hasattr(v, "__iter__"):
-        return set(v)
-    return {v}
-
-
 class Node:
-    def __init__(self, start=None, end=None, string_id=None, string_pos=None, children=None, terminal_edge_ids=None):
+    __slots__ = ("start", "end", "string_id", "string_pos", "children", "terminal_edge_ids", "parent", "path_label_length")
+
+    def __init__(self, start=None, end=None, string_id=None, string_pos=None, children=None):
         """
         Args:
             start: start position in string string_id, representing string written to the edge going towards this node
             end: end position in string string_id, representing string written to the edge going towards this node
-            string_id: list of string id (list pos) to whom start and end correspond to
+            string_id: string id (list pos) to whom start and end correspond to
             string_pos: only in leaf nodes, to string_id corresponding list representing the suffix starting at this position
             children: Node or list of Nodes being children of this Node
-            terminal_edge_ids: string or set of string ids that have terminal edges outgoing from this node
         """
         self.start = start
         self.end = end
-        self.string_id = make_list_or_none(string_id)
-        self.string_pos = make_list_or_none(string_pos)
+        self.string_id = [string_id] if string_id is not None else None
+        self.string_pos = [string_pos] if string_pos is not None else None
         self.children = []
-        self.add_children(children)
-        self.terminal_edge_ids = make_set_or_empty_set(terminal_edge_ids)
+        if children is not None:
+            self.add_children(children)
+        self.terminal_edge_ids = None
 
         self.parent = None
         self.path_label_length = 0
 
     def __repr__(self):
-        s = str(self.string_id[0]) +'['+ str(self.start) + ':'+ str(self.end) +']'
-
-        return s
+        return f"{self.string_id[0]}[{self.start}:{self.end}]"
 
     def add_children(self, children: "Node"):  # type annotation just for PyCharm...
         """add child(ren) and return the last one"""
-        if children is None:
-            return None
         if not isinstance(children, list):
             children = [children]
-
         self.children.extend(children)
+
         for child in children:
             child.parent = self
             child.update_path_label_length()
@@ -74,12 +56,20 @@ class Node:
     def update_path_label_length(self):
         self.path_label_length = self.parent.path_label_length + self.end - self.start
 
+    def add_terminal_edge_ids(self, ids):
+        """pass iterable of string ids that have terminal edges outgoing from this node"""
+        if self.terminal_edge_ids is None:
+            self.terminal_edge_ids = set()
+        self.terminal_edge_ids.update(ids)
+
 
 TERMINATION_SYMBOL = "$"
 
 
 class SuffixTree:
-    def __init__(self, strings=None, construction_method="ukkonen", track_terminal_edges=False, verbose=False):
+    __slots__ = ("strings", "root", "_add_string", "track_terminal_edges", "leaves")
+
+    def __init__(self, strings=None, construction_method="naive", track_terminal_edges=False, verbose=False):
         """
         Args:
             strings: string or list of strings to be added to the suffix tree
@@ -131,11 +121,11 @@ class SuffixTree:
                             # splitting point?
                             if suffix[suffix_pos] != child_string[label_pos]:
                                 # add splitting node
-                                split_node = current_node.add_children(Node(child.start, label_pos, child.string_id))
+                                split_node = current_node.add_children(Node(child.start, label_pos, child.string_id[0]))
                                 split_node.add_children(current_node.children.pop(child_id))
                                 child.set_start(label_pos)
                                 if self.track_terminal_edges and child_string[label_pos] == TERMINATION_SYMBOL:
-                                    split_node.terminal_edge_ids.update(child.string_id)
+                                    split_node.add_terminal_edge_ids(child.string_id)
                                 # to add leaf node
                                 current_node = split_node
                                 node_found = True
@@ -152,12 +142,12 @@ class SuffixTree:
             if suffix_pos == len(suffix):
                 current_node.add_string_to_leaf(string_id, i)
                 if self.track_terminal_edges and current_node.end - current_node.start == 1:
-                    current_node.parent.terminal_edge_ids.add(string_id)
+                    current_node.add_terminal_edge_ids([string_id])
             else:  # ...or add new leaf node
                 new_leaf = current_node.add_children(Node(i + suffix_pos, len(string), string_id, i))
                 self.leaves.append(new_leaf)
                 if self.track_terminal_edges and suffix_pos == len(suffix) - 1:
-                    current_node.terminal_edge_ids.add(string_id)
+                    current_node.add_terminal_edge_ids([string_id])
             if verbose:
                 print(self, "\n")
 
@@ -176,18 +166,18 @@ class SuffixTree:
         prefix_pos = 0
         strings_match_lengths = {string_id: 0 for string_id in range(len(self.strings))}
         while len(current_node.children) > 0:
-            # update maximal path length for each string with terminal edges from this node
-            for string_id in current_node.terminal_edge_ids:
-                strings_match_lengths[string_id] = max(strings_match_lengths[string_id], current_node.path_label_length)
-            # look for child with prefix matching label to continue traversal
             for child in current_node.children:
                 child_string = self.strings[child.string_id[0]]
+                # update maximal path length for each string with terminal edges from current_node
+                if child_string[child.start:child.end] == TERMINATION_SYMBOL:
+                    for string_id in child.string_id:
+                        strings_match_lengths[string_id] = max(strings_match_lengths[string_id], current_node.path_label_length)
+                # look for child with prefix matching label to continue traversal
                 if self.strings[prefix_string_id][prefix_pos] == child_string[child.start]:
-                    prefix_pos += child.end - child.start
-                    current_node = child
-                    break
-            else:
-                raise AssertionError("didn't find prefix in tree")
+                    new_prefix_pos = prefix_pos + child.end - child.start
+                    new_node = child
+            prefix_pos = new_prefix_pos
+            current_node = new_node
         # remove prefix itself
         strings_match_lengths.pop(prefix_string_id, None)
         return strings_match_lengths
@@ -404,4 +394,4 @@ if __name__ == '__main__':
     tree = SuffixTree(test_string, construction_method="naive", track_terminal_edges=True, verbose=False)
     print(repr(tree))
     print(tree)
-    print(tree.find_most_common_longest_suffix())
+    print(tree.find_most_common_suffixes())
