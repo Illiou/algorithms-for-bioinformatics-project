@@ -1,0 +1,9 @@
+Time needed to compute Suffix Tree: 1792082 ms
+
+Time needed to find adapter matches: 835 ms
+Number of matched sequences: 646364
+
+Time needed to find adapter matches with mismatches: 2178 ms
+Number of matched sequences: 670918
+
+Process finished with exit code 0
