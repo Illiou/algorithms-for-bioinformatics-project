@@ -142,7 +142,7 @@ class SuffixTree:
             if suffix_pos == len(suffix):
                 current_node.add_string_to_leaf(string_id, i)
                 if self.track_terminal_edges and current_node.end - current_node.start == 1:
-                    current_node.add_terminal_edge_ids([string_id])
+                    current_node.parent.add_terminal_edge_ids([string_id])
             else:  # ...or add new leaf node
                 new_leaf = current_node.add_children(Node(i + suffix_pos, len(string), string_id, i))
                 self.leaves.append(new_leaf)
@@ -242,17 +242,20 @@ class SuffixTree:
         nodes_left = [(set(), self.root)]
         while len(nodes_left) > 0:
             terminal_edge_ids_on_path, node = nodes_left.pop()
+            nodes_to_be_added = []
+            leaves_to_be_added = []
             for child in node.children:
-                new_terminal_edge_ids_on_path = terminal_edge_ids_on_path.copy()
+                if self.strings[child.string_id[0]][child.start:child.end] == TERMINATION_SYMBOL:
+                    if node is self.root:
+                        continue  # skip leaf on root with termination symbol
+                    terminal_edge_ids_on_path.update(child.string_id)
                 if len(child.children) > 0:
-                    new_terminal_edge_ids_on_path.update(child.terminal_edge_ids)
-                    nodes_left.append((new_terminal_edge_ids_on_path, child))
+                    nodes_to_be_added.append(child)
                 else:
-                    # don't add string ids from nodes with only the Termination Symbol as label
-                    # they have been added through the parents terminal_edge_ids already and it avoids empty string as most common
-                    if self.strings[child.string_id[0]][child.start:child.end] != TERMINATION_SYMBOL:
-                        new_terminal_edge_ids_on_path.update(child.string_id)
-                    recorded_leaves.append((len(new_terminal_edge_ids_on_path), child.path_label_length, child))
+                    leaves_to_be_added.append(child)
+            nodes_left.extend((terminal_edge_ids_on_path.copy(), node) for node in nodes_to_be_added)
+            recorded_leaves.extend((len(terminal_edge_ids_on_path.union(leaf.string_id)), leaf.path_label_length - 1, leaf)
+                                   for leaf in leaves_to_be_added)
         recorded_leaves.sort(key=itemgetter(0, 1), reverse=True)
         return recorded_leaves
 
@@ -269,13 +272,13 @@ class SuffixTree:
 
     def render_children(self, node, root_label=False):
         if root_label:
-            if self.track_terminal_edges and len(node.terminal_edge_ids) > 0:
+            if node.terminal_edge_ids is not None and len(node.terminal_edge_ids) > 0:
                 label = f"({min(node.terminal_edge_ids)}..{max(node.terminal_edge_ids)})"
             else:
                 label = "()"
         else:
             label = f"|-{self.strings[node.string_id[0]][node.start:node.end]}"
-            if self.track_terminal_edges and len(node.terminal_edge_ids) > 0:
+            if node.terminal_edge_ids is not None and len(node.terminal_edge_ids) > 0:
                 label += f" ({', '.join(str(n) for n in node.terminal_edge_ids)})"
         if len(node.children) > 0:
             all_lines = []
