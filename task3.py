@@ -1,124 +1,92 @@
 from SuffixTree import SuffixTree
-import json
-import time
 import matplotlib.pylab as plt
+import time
 import numpy as np
-
 
 def current_milli_time():
     return round(time.perf_counter() * 1000)
 
-def get_current_time_for_filename():
-    return time.strftime("%Y-%m-%d-%H-%M-%S")
+data = 'datasets/s_1-1_1M.txt'
 
+# Running Time Analysis:
+time_needed = []
+number_of_lines = [1,100,200,300,400,500]
+for number in number_of_lines:
+    # Construction of tree
+    start_time = current_milli_time()
+    suffix_tree = SuffixTree('', construction_method="naive", track_terminal_edges=True)
+    with open(data,'r') as file:
+        for line_num, line in enumerate(file):
+            if line_num >= number:
+                break
+            suffix_tree.add_string(line.strip())
 
-# ---------------- Settings ----------------
+    # finding the adaptersequence:
+    start_time = current_milli_time()
+    adapter = suffix_tree.most_common_adaptersequence()
+    end_time = current_milli_time()
+    time_needed.append(end_time-start_time)
 
-dataset = "s_1-1_1M.txt"
-dataset_path = f"datasets/{dataset}"
+plt.plot(number_of_lines, time_needed)
+plt.xlabel('Number of Sequences')
+plt.ylabel('Runtime in ms')
+plt.grid()
+plt.savefig('Runtime_task3.pdf')
+plt.close()
 
-number_of_lines = 1000
-sequences_length = 76  # all sequences are equally long
-
-save_outputs = True
-save_graphs = True
-
-lines_param = f"_lines-{number_of_lines}"
-time_param = f"_{get_current_time_for_filename()}"
-
-outputs_path = "outputs/"
-unique_sequences_output_path = f"{outputs_path}task3_unique_sequences{lines_param}{time_param}.json"
-most_common_suffixes_output_path = f"{outputs_path}task3_most_common_suffixes{lines_param}{time_param}.json"
-adapter_match_lengths_output_path = f"{outputs_path}task3_adapter_match_lengths{lines_param}{time_param}.json"
-
-graphs_path = "graphs/"
-remaining_lengths_distribution_graph_path = f"{graphs_path}task3_remaining_lengths_distribution{lines_param}{time_param}.svg"
-unique_sequences_frequency_distribution_graph_path = f"{graphs_path}task3_unique_sequences_frequency_distribution{lines_param}{time_param}.svg"
-
-
-# ---------------- Compute Suffix Tree ----------------
-
-suffix_tree = SuffixTree()
-
+# Actual task
+number_of_lines = 1e10  # 10687775
+data = 'datasets/s_1-1_1M.txt'
+# Construction of tree
 start_time = current_milli_time()
-with open(dataset_path, "r") as file:
+suffix_tree = SuffixTree('', construction_method="naive", track_terminal_edges=True)
+with open(data, 'r') as file:
     for line_num, line in enumerate(file):
         if line_num >= number_of_lines:
             break
         suffix_tree.add_string(line.strip())
 end_time = current_milli_time()
+print(f"Time needed for construction of tree: {end_time - start_time} ms")
 
-print(f"Time needed to compute Suffix Tree: {end_time - start_time} ms")
-
-
-# ---------------- Count number of unique sequences ----------------
-
+# finding the adaptersequence:
 start_time = current_milli_time()
-unique_sequences = suffix_tree.count_unique_sequences()
+adapter = suffix_tree.most_common_adaptersequence()
 end_time = current_milli_time()
+print(f"Time needed for finding the adaptersequence: {end_time - start_time} ms")
+print('Adapter found: ', adapter)
 
-print(f"\nTime needed to count number of unique sequences: {end_time - start_time} ms")
+# remove the adapter from the sequences:
+suffix_tree = SuffixTree(adapter, construction_method="naive", track_terminal_edges=True)
+with open(data, "r") as file:
+    for line_num, line in enumerate(file):
+        if line_num >= number_of_lines:
+            break
+        suffix_tree.add_string(line.strip())
 
-if save_outputs:
-    with open(unique_sequences_output_path, "w") as file:
-        json.dump(unique_sequences, file)
-else:
-    print(unique_sequences[:100])
-
-if save_graphs:
-    unique_sequences_frequency_distribution = [c / number_of_lines for c, _ in unique_sequences]
-
-    curr_fig, curr_ax = plt.subplots()
-    curr_ax.bar(np.arange(len(unique_sequences)), unique_sequences_frequency_distribution)
-    curr_ax.set(title="Task 3: Unique Sequences Frequency Distribution", xlabel="Unique Sequence", ylabel="Occurrence Probability")
-    curr_fig.savefig(unique_sequences_frequency_distribution_graph_path)
-
-
-# ---------------- Find most common suffixes ----------------
-
-start_time = current_milli_time()
-most_common_suffixes = suffix_tree.find_most_common_suffixes()
-end_time = current_milli_time()
-
-print(f"\nTime needed to find most common suffixes: {end_time - start_time} ms")
-
-if save_outputs:
-    with open(most_common_suffixes_output_path, "w") as file:
-        json.dump([(count, length, suffix_tree.strings[node.string_id[0]][-length:-1])
-                   for count, length, node in most_common_suffixes[:1000]], file)
-else:
-    print(most_common_suffixes[:1000])
-
-
-# ---------------- Determine adapter ----------------
-
-# assume most common suffix is adapter
-_, length, adapter_leaf_node = most_common_suffixes[0]
-adapter = suffix_tree.strings[adapter_leaf_node.string_id[0]][-length:-1]
-print(f"\nMost likely adapter sequence: {adapter}")
-
-
-# ---------------- Find adapter suffix-prefix matches and remaining lengths distribution ----------------
-
-adapter_string_id = suffix_tree.add_string(adapter)
-
-start_time = current_milli_time()
+adapter_string_id = 0
 adapter_match_lengths = suffix_tree.find_suffix_matches_for_prefix(adapter_string_id)
-end_time = current_milli_time()
 
-print(f"\nTime needed to find adapter prefix-suffix matches: {end_time - start_time} ms")
+sequences_without_adapter = []
+len_sequences = []
+for string_id, match_length in adapter_match_lengths.items():
+    if len(suffix_tree.strings[string_id][:-match_length]) > 0:
+        sequences_without_adapter.append(suffix_tree.strings[string_id][:-match_length])
+        len_sequences.append(len(suffix_tree.strings[string_id][:-match_length]))
+length_distribution = {x: len_sequences.count(x) for x in len_sequences}
+lists = sorted(length_distribution.items())  # sorted by key, return a list of tuples
+x, y = zip(*lists)  # unpack a list of pairs into two tuples
+plt.plot(x, y)
+plt.xlabel('Length')
+plt.ylabel('Frequency')
+plt.grid()
+plt.savefig('length_distribution_task3.pdf')
+plt.close()
 
-if save_outputs:
-    with open(adapter_match_lengths_output_path, "w") as file:
-        json.dump(adapter_match_lengths, file)
-else:
-    print(adapter_match_lengths)
-
-if save_graphs:
-    remaining_lengths = sequences_length - np.asarray(list(adapter_match_lengths.values()))
-    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=max(remaining_lengths) + 1, density=True)
-
-    curr_fig, curr_ax = plt.subplots()
-    curr_ax.bar(np.arange(len(remaining_lengths_distribution)), remaining_lengths_distribution)
-    curr_ax.set(title="Task 3: Remaining Sequence Length Distribution", xlabel="Remaining Sequence Length", ylabel="Occurrence Probability")
-    curr_fig.savefig(remaining_lengths_distribution_graph_path)
+# get number of unique sequences:
+suffix_tree = SuffixTree(sequences_without_adapter[0], construction_method="naive", track_terminal_edges=True)
+for sequence in sequences_without_adapter[1:]:
+    suffix_tree.add_string(sequence)
+unique_sequences = suffix_tree.count_unique_sequences()
+sorted_unique_sequences = [(k, unique_sequences[k]) for k in sorted(unique_sequences, key=unique_sequences.get, reverse=True)]
+for i in range(5):
+    print(sorted_unique_sequences[i])
