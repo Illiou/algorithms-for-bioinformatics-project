@@ -8,7 +8,7 @@ def current_milli_time():
     return round(time.perf_counter() * 1000)
 
 check_correctness_and_print_suffixes = False
-number_of_lines = 100000 # 10687775
+number_of_lines = 1e5 # 10687775
 data = 'datasets/MultiplexedSamples'
 
 # Construction of tree
@@ -48,7 +48,9 @@ for sequence in sequences_without_adapter[1:]:
 barcodes, sequences_per_sample, number_sequences_per_sample, length_of_sequences = suffix_tree.find_barcodes(4)
 end_time = current_milli_time()
 print(f"Time needed for finding the barcodes: {end_time - start_time} ms")
-print(barcodes, number_sequences_per_sample)
+print('Barcodes: ', barcodes)
+for barcode, frequency in number_sequences_per_sample:
+    print(barcode, '&', frequency, '\\''\\')
 
 
 if check_correctness_and_print_suffixes:
@@ -80,9 +82,9 @@ for barcode in length_of_sequences.keys():
         lists = sorted(length_distribution.items())  # sorted by key, return a list of tuples
         x, y = zip(*lists)  # unpack a list of pairs into two tuples
         plt.plot(x, y, 'x-', label=barcode)
-plt.title('Task 2: Length Distribution of Sequences per Sample')
+plt.title('Task 4: Length Distribution of Sequences per Sample')
 plt.legend()
-plt.xlabel('Length')
+plt.xlabel('Remaining Sequence Length')
 plt.ylabel('Frequency')
 plt.grid()
 if number_of_lines:
@@ -92,8 +94,13 @@ else:
 plt.close()
 
 # most frequently occuring sequence within each sample:
+print('Unique Sequences:')
 counts = suffix_tree.count_unique_sequences()
-print(counts[:4])
+barcode = []
+for sequence, count in counts:
+    if sequence[-4:] not in barcode:
+        barcode.append(sequence[-4:])
+        print(sequence, '&', count, '\\''\\')
 
 
 

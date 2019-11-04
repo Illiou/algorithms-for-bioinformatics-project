@@ -342,7 +342,9 @@ class SuffixTree:
         for string_id in range(len(self.strings)):
             length_of_sequences[barcodes[string_id]].append(len(self.strings[string_id]))
 
-        return set(barcodes), sequences_per_sample, number_sequences_per_sample, length_of_sequences
+        ordered_number_per_sample = [(k, number_sequences_per_sample[k]) for k in sorted(number_sequences_per_sample, key=number_sequences_per_sample.get, reverse=True)]
+
+        return set(barcodes), sequences_per_sample, ordered_number_per_sample, length_of_sequences
 
     def count_unique_sequences(self):
         """Counts the amount of unique sequences in the tree."""
