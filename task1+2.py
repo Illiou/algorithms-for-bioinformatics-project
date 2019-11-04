@@ -17,13 +17,13 @@ adapter = "TGGAATTCTCGGGTGCCAAGGAACTCCAGTCACACAGTGATCTCGTATGCCGTCTTCTGCTTG"
 dataset = "s_3_sequence_1M.txt"
 dataset_path = f"datasets/{dataset}"
 
-number_of_lines = 10000
+number_of_lines = 1000000
 sequences_length = 50  # all sequences are equally long
 max_mismatch_rate = 0.1
 
 check_correctness_and_print_suffixes = False
-save_outputs = True
-save_graphs = True
+save_outputs = False
+save_graphs = False
 
 lines_param = f"_lines-{number_of_lines}"
 mismatch_param = f"_mismatch-rate-{max_mismatch_rate}"
@@ -46,12 +46,13 @@ adapter_string_id = 0
 start_time = current_milli_time()
 with open(dataset_path, "r") as file:
     for line_num, line in enumerate(file):
-        if line_num >= number_of_lines:
-            break
+        #if line_num >= number_of_lines:
+        #    break
         suffix_tree.add_string(line.strip())
 end_time = current_milli_time()
 
 print(f"Time needed to compute Suffix Tree: {end_time - start_time} ms")
+
 
 # print(repr(suffix_tree))
 # print(suffix_tree)
@@ -62,9 +63,11 @@ print(f"Time needed to compute Suffix Tree: {end_time - start_time} ms")
 start_time = current_milli_time()
 adapter_match_lengths = suffix_tree.find_suffix_matches_for_prefix(adapter_string_id)
 end_time = current_milli_time()
+time_needed.append(end_time - start_time)
 
 print(f"\nTime needed to find adapter matches: {end_time - start_time} ms")
 print(f"Number of matched sequences: {sum(v > 0 for v in adapter_match_lengths.values())}")
+
 
 if check_correctness_and_print_suffixes:
     matched_suffixes = []
@@ -95,6 +98,7 @@ if save_graphs:
 start_time = current_milli_time()
 adapter_match_lengths_with_mismatches = suffix_tree.find_suffix_matches_for_prefix_with_mismatches(adapter_string_id, max_mismatch_rate)
 end_time = current_milli_time()
+
 
 print(f"\nTime needed to find adapter matches with mismatches: {end_time - start_time} ms")
 print(f"Number of matched sequences: {sum(v > 0 for v in adapter_match_lengths_with_mismatches.values())}")
