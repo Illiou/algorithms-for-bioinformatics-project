@@ -1,0 +1,13 @@
+Time needed to compute Suffix Tree: 483889 ms
+
+Time needed to count number of unique sequences: 377 ms
+
+Time needed to find most common suffixes: 4238627 ms
+
+Most likely adapter sequence: CGTCTGAACTCCAGTCACATCACGATCTCGTATGCCGTCTTCTGCTTGAAAAAAAAAAAAGCACAAG
+
+Time needed to find adapter prefix-suffix matches: 90 ms
+
+Time needed to compute unique sequence Suffix Tree: 99476 ms
+
+Time needed to find most common suffixes in unique sequence Suffix Tree: 828201 ms
