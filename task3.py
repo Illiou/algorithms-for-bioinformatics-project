@@ -67,11 +67,11 @@ else:
     print(unique_sequences[:100])
 
 if save_graphs:
-    unique_sequences_frequency_distribution = [c / number_of_lines for c, _ in unique_sequences]
+    unique_sequences_frequency_distribution = [c / number_of_lines for c, _ in unique_sequences[:100]]
 
     curr_fig, curr_ax = plt.subplots()
-    curr_ax.bar(np.arange(len(unique_sequences)), unique_sequences_frequency_distribution)
-    curr_ax.set(title="Task 3: Unique Sequences Frequency Distribution", xlabel="Unique Sequence", ylabel="Occurrence Probability")
+    curr_ax.bar(np.arange(len(unique_sequences_frequency_distribution)), unique_sequences_frequency_distribution)
+    curr_ax.set(title="Task 3: Unique Sequences Frequency Distribution \nof the 100 Most Frequent Sequences", xlabel="Unique Sequence", ylabel="Occurrence Probability")
     curr_fig.savefig(unique_sequences_frequency_distribution_graph_path)
 
 
@@ -116,7 +116,7 @@ else:
 
 if save_graphs:
     remaining_lengths = sequences_length - np.asarray(list(adapter_match_lengths.values()))
-    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=max(remaining_lengths) + 1, density=True)
+    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=np.arange(sequences_length + 1), density=True)
 
     curr_fig, curr_ax = plt.subplots()
     curr_ax.bar(np.arange(len(remaining_lengths_distribution)), remaining_lengths_distribution)

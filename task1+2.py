@@ -46,13 +46,12 @@ adapter_string_id = 0
 start_time = current_milli_time()
 with open(dataset_path, "r") as file:
     for line_num, line in enumerate(file):
-        #if line_num >= number_of_lines:
-        #    break
+        if line_num >= number_of_lines:
+            break
         suffix_tree.add_string(line.strip())
 end_time = current_milli_time()
 
 print(f"Time needed to compute Suffix Tree: {end_time - start_time} ms")
-
 
 # print(repr(suffix_tree))
 # print(suffix_tree)
@@ -63,11 +62,9 @@ print(f"Time needed to compute Suffix Tree: {end_time - start_time} ms")
 start_time = current_milli_time()
 adapter_match_lengths = suffix_tree.find_suffix_matches_for_prefix(adapter_string_id)
 end_time = current_milli_time()
-time_needed.append(end_time - start_time)
 
 print(f"\nTime needed to find adapter matches: {end_time - start_time} ms")
 print(f"Number of matched sequences: {sum(v > 0 for v in adapter_match_lengths.values())}")
-
 
 if check_correctness_and_print_suffixes:
     matched_suffixes = []
@@ -85,20 +82,20 @@ if save_outputs:
 
 if save_graphs:
     remaining_lengths = sequences_length - np.asarray(list(adapter_match_lengths.values()))
-    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=max(remaining_lengths) + 1, density=True)
+    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=np.arange(sequences_length + 1), density=True)
 
     curr_fig, curr_ax = plt.subplots()
     curr_ax.bar(np.arange(len(remaining_lengths_distribution)), remaining_lengths_distribution)
     curr_ax.set(title="Task 1: Remaining Sequence Length Distribution", xlabel="Remaining Sequence Length", ylabel="Occurrence Probability")
     curr_fig.savefig(task1_graph_path)
-
+else:
+    plt.show()
 
 # ---------------- Task 2 ----------------
 
 start_time = current_milli_time()
 adapter_match_lengths_with_mismatches = suffix_tree.find_suffix_matches_for_prefix_with_mismatches(adapter_string_id, max_mismatch_rate)
 end_time = current_milli_time()
-
 
 print(f"\nTime needed to find adapter matches with mismatches: {end_time - start_time} ms")
 print(f"Number of matched sequences: {sum(v > 0 for v in adapter_match_lengths_with_mismatches.values())}")
@@ -122,9 +119,11 @@ if save_outputs:
 
 if save_graphs:
     remaining_lengths = sequences_length - np.asarray(list(adapter_match_lengths_with_mismatches.values()))
-    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=max(remaining_lengths) + 1, density=True)
+    remaining_lengths_distribution, _ = np.histogram(remaining_lengths, bins=np.arange(sequences_length + 1), density=True)
 
     curr_fig, curr_ax = plt.subplots()
     curr_ax.bar(np.arange(len(remaining_lengths_distribution)), remaining_lengths_distribution)
     curr_ax.set(title="Task 2: Remaining Sequence Length Distribution", xlabel="Remaining Sequence Length", ylabel="Occurrence Probability")
     curr_fig.savefig(task2_graph_path)
+else:
+    plt.show()
