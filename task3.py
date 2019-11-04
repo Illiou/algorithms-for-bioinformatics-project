@@ -78,7 +78,7 @@ if save_graphs:
 # ---------------- Find most common suffixes ----------------
 
 start_time = current_milli_time()
-most_common_suffixes = suffix_tree.find_most_common_suffixes()
+most_common_suffixes, most_common_suffix = suffix_tree.find_most_common_suffixes()
 end_time = current_milli_time()
 
 print(f"\nTime needed to find most common suffixes: {end_time - start_time} ms")
@@ -94,8 +94,7 @@ else:
 # ---------------- Determine adapter ----------------
 
 # assume most common suffix is adapter
-_, length, adapter_leaf_node = most_common_suffixes[0]
-adapter = suffix_tree.strings[adapter_leaf_node.string_id[0]][-length:-1]
+adapter = most_common_suffix
 print(f"\nMost likely adapter sequence: {adapter}")
 
 
@@ -126,7 +125,7 @@ if save_graphs:
 
 
 # ---------------- Find most common suffixes of unique sequences ----------------
-del suffix_tree
+del suffix_tree  # doesn't seem to work as intended (i.e. freeing up the memory)
 
 suffix_tree = SuffixTree()
 

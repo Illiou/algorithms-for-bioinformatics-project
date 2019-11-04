@@ -234,7 +234,7 @@ class SuffixTree:
         """
         Traverses the whole tree to find the suffix with the most terminal edge ids on the path
         Returns: list of the form [(number_of_terminal_edge_ids_on_path, suffix_length, Node), ...] ordered by
-        most terminal edges and then suffix length and the most common suffix
+        most terminal edges and then suffix length, the most common suffix
         """
         # [(number_of_terminal_edge_ids_on_path, suffix_length, Node), ...]
         recorded_leaves = []
@@ -258,10 +258,11 @@ class SuffixTree:
                                    for leaf in leaves_to_be_added)
         recorded_leaves.sort(key=itemgetter(0, 1), reverse=True)
         best_terminal_edges, best_length, best_node = recorded_leaves[0]
-        most_common_suffix = self.strings[best_node.string_id[0]][-best_node.path_label_length:]
+        most_common_suffix = self.strings[best_node.string_id[0]][-best_node.path_label_length:-1]
         return recorded_leaves, most_common_suffix
 
     def __repr__(self):
+        """broken because of missing __dict__"""
         # needed to remove circularity
         def remove_parent(o):
             if isinstance(o, set):
@@ -348,12 +349,14 @@ class SuffixTree:
 
     def count_unique_sequences(self):
         """Counts the amount of unique sequences in the tree."""
-        counts = {}
-        for leave in self.leaves:
-            # if that suffix represents the whole sequence, count all of those sequences
-            if leave.path_label_length == len(self.strings[leave.string_id[0]]):
-                counts[self.strings[leave.string_id[0]]] = len(leave.string_id)
-        return [(k, counts[k]) for k in sorted(counts, key=counts.get, reverse=True)]
+        # [(number of sequence occurrences, sequence), ...]
+        unique_sequences = []
+        for leaf in self.leaves:
+            # if that suffix represents a whole sequence, count all of the sequences ending here
+            if leaf.path_label_length == len(self.strings[leaf.string_id[0]]):
+                unique_sequences.append((len(leaf.string_id), self.strings[leaf.string_id[0]][:-1]))
+        unique_sequences.sort(key=itemgetter(0), reverse=True)
+        return unique_sequences
 
 
 if __name__ == '__main__':
@@ -370,6 +373,6 @@ if __name__ == '__main__':
 "TGGAATTCTCGGGAGCCAAGGAACTCCAGTAAAACAGGGATCTCGTATGC",
 "TTTCTATGATGAATCAAACTAGCTCACTATGACCGACAGTGAAAATACAT",]
     tree = SuffixTree(test_string, construction_method="naive", track_terminal_edges=True, verbose=False)
-    print(repr(tree))
+    # print(repr(tree))
     print(tree)
     print(tree.find_most_common_suffixes())

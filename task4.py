@@ -97,7 +97,7 @@ plt.close()
 print('Unique Sequences:')
 counts = suffix_tree.count_unique_sequences()
 barcode = []
-for sequence, count in counts:
+for count, sequence in counts:
     if sequence[-4:] not in barcode:
         barcode.append(sequence[-4:])
         print(sequence, '&', count, '\\''\\')
